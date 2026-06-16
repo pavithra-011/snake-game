@@ -1,31 +1,43 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Random;
 
 public class GamePanel extends JPanel implements ActionListener {
 
     static final int SCREEN_WIDTH = 600;
     static final int SCREEN_HEIGHT = 600;
     static final int UNIT_SIZE = 25;
-    static final int GAME_UNITS = (SCREEN_WIDTH * SCREEN_HEIGHT) / UNIT_SIZE;
+    static final int GAME_UNITS =
+            (SCREEN_WIDTH * SCREEN_HEIGHT) / UNIT_SIZE;
     static final int DELAY = 150;
 
     final int[] x = new int[GAME_UNITS];
     final int[] y = new int[GAME_UNITS];
 
     int bodyParts = 3;
+    int applesEaten;
 
     int foodX;
     int foodY;
 
     char direction = 'R';
 
+    boolean running = false;
+
     Timer timer;
 
-    GamePanel() {
+    Random random;
+
+    public GamePanel() {
+
+        random = new Random();
 
         this.setPreferredSize(
-                new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT)
+                new Dimension(
+                        SCREEN_WIDTH,
+                        SCREEN_HEIGHT
+                )
         );
 
         this.setBackground(Color.BLACK);
@@ -39,6 +51,12 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public void startGame() {
 
+        bodyParts = 3;
+
+        applesEaten = 0;
+
+        running = true;
+
         x[0] = 100;
         y[0] = 100;
 
@@ -48,11 +66,24 @@ public class GamePanel extends JPanel implements ActionListener {
         x[2] = 50;
         y[2] = 100;
 
-        foodX = 300;
-        foodY = 300;
+        newFood();
 
         timer = new Timer(DELAY, this);
+
         timer.start();
+    }
+
+    public void newFood() {
+
+        foodX =
+                random.nextInt(
+                        SCREEN_WIDTH / UNIT_SIZE
+                ) * UNIT_SIZE;
+
+        foodY =
+                random.nextInt(
+                        SCREEN_HEIGHT / UNIT_SIZE
+                ) * UNIT_SIZE;
     }
 
     @Override
@@ -65,45 +96,97 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public void draw(Graphics g) {
 
-        g.setColor(Color.DARK_GRAY);
+        if (running) {
 
-        for (int i = 0; i < SCREEN_WIDTH; i += UNIT_SIZE) {
-            g.drawLine(i, 0, i, SCREEN_HEIGHT);
-        }
+            g.setColor(Color.DARK_GRAY);
 
-        for (int i = 0; i < SCREEN_HEIGHT; i += UNIT_SIZE) {
-            g.drawLine(0, i, SCREEN_WIDTH, i);
-        }
+            for (int i = 0;
+                 i < SCREEN_WIDTH;
+                 i += UNIT_SIZE) {
 
-        g.setColor(Color.RED);
-
-        g.fillOval(
-                foodX,
-                foodY,
-                UNIT_SIZE,
-                UNIT_SIZE
-        );
-
-        for (int i = 0; i < bodyParts; i++) {
-
-            if (i == 0) {
-                g.setColor(Color.GREEN);
-            } else {
-                g.setColor(new Color(45, 180, 0));
+                g.drawLine(
+                        i,
+                        0,
+                        i,
+                        SCREEN_HEIGHT
+                );
             }
 
-            g.fillRect(
-                    x[i],
-                    y[i],
+            for (int i = 0;
+                 i < SCREEN_HEIGHT;
+                 i += UNIT_SIZE) {
+
+                g.drawLine(
+                        0,
+                        i,
+                        SCREEN_WIDTH,
+                        i
+                );
+            }
+
+            g.setColor(Color.RED);
+
+            g.fillOval(
+                    foodX,
+                    foodY,
                     UNIT_SIZE,
                     UNIT_SIZE
             );
+
+            for (int i = 0;
+                 i < bodyParts;
+                 i++) {
+
+                if (i == 0) {
+
+                    g.setColor(Color.GREEN);
+
+                } else {
+
+                    g.setColor(
+                            new Color(
+                                    45,
+                                    180,
+                                    0
+                            )
+                    );
+                }
+
+                g.fillRect(
+                        x[i],
+                        y[i],
+                        UNIT_SIZE,
+                        UNIT_SIZE
+                );
+            }
+
+            g.setColor(Color.WHITE);
+
+            g.setFont(
+                    new Font(
+                            "Arial",
+                            Font.BOLD,
+                            30
+                    )
+            );
+
+            g.drawString(
+                    "Score : " + applesEaten,
+                    220,
+                    35
+            );
+
+        } else {
+
+            gameOver(g);
         }
     }
 
     public void move() {
 
-        for (int i = bodyParts; i > 0; i--) {
+        for (int i = bodyParts;
+             i > 0;
+             i--) {
 
             x[i] = x[i - 1];
             y[i] = y[i - 1];
@@ -129,43 +212,147 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
+    public void checkFood() {
 
-        move();
+        if (x[0] == foodX &&
+                y[0] == foodY) {
+
+            bodyParts++;
+
+            applesEaten++;
+
+            newFood();
+        }
+    }
+
+    public void checkCollisions() {
+
+        for (int i = bodyParts;
+             i > 0;
+             i--) {
+
+            if (x[0] == x[i] &&
+                    y[0] == y[i]) {
+
+                running = false;
+            }
+        }
+
+        if (x[0] < 0)
+            running = false;
+
+        if (x[0] >= SCREEN_WIDTH)
+            running = false;
+
+        if (y[0] < 0)
+            running = false;
+
+        if (y[0] >= SCREEN_HEIGHT)
+            running = false;
+
+        if (!running) {
+
+            timer.stop();
+        }
+    }
+
+    public void gameOver(Graphics g) {
+
+        g.setColor(Color.RED);
+
+        g.setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        50
+                )
+        );
+
+        FontMetrics metrics =
+                getFontMetrics(
+                        g.getFont()
+                );
+
+        g.drawString(
+                "GAME OVER",
+                (SCREEN_WIDTH -
+                        metrics.stringWidth(
+                                "GAME OVER"
+                        )) / 2,
+                SCREEN_HEIGHT / 2
+        );
+
+        g.setColor(Color.WHITE);
+
+        g.setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        30
+                )
+        );
+
+        g.drawString(
+                "Final Score : "
+                        + applesEaten,
+                180,
+                SCREEN_HEIGHT / 2 + 60
+        );
+    }
+
+    @Override
+    public void actionPerformed(
+            ActionEvent e) {
+
+        if (running) {
+
+            move();
+
+            checkFood();
+
+            checkCollisions();
+        }
 
         repaint();
     }
 
-    public class MyKeyAdapter extends KeyAdapter {
+    public class MyKeyAdapter
+            extends KeyAdapter {
 
         @Override
-        public void keyPressed(KeyEvent e) {
+        public void keyPressed(
+                KeyEvent e) {
 
-            switch (e.getKeyCode()) {
+            switch (
+                    e.getKeyCode()
+            ) {
 
                 case KeyEvent.VK_LEFT:
-                    if (direction != 'R') {
+
+                    if (direction != 'R')
                         direction = 'L';
-                    }
+
                     break;
 
                 case KeyEvent.VK_RIGHT:
-                    if (direction != 'L') {
+
+                    if (direction != 'L')
                         direction = 'R';
-                    }
+
                     break;
 
                 case KeyEvent.VK_UP:
-                    if (direction != 'D') {
+
+                    if (direction != 'D')
                         direction = 'U';
-                    }
+
                     break;
 
                 case KeyEvent.VK_DOWN:
-                    if (direction != 'U') {
+
+                    if (direction != 'U')
                         direction = 'D';
-                    }
+
                     break;
             }
         }
